@@ -15,12 +15,12 @@ export default function LandingPage() {
           </span>
           <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-6">
             Waste for some, <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF6B35] to-[#FF9F1C]">
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-[#FF6B35] to-[#FF9F1C]">
               Food for many.
             </span>
           </h1>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-10">
-            <Link href="/restaurant">
+            <Link href="/restaurant-new">
               <button className="px-8 py-4 bg-[#FF6B35] text-white font-bold rounded-full shadow-lg flex items-center gap-2 hover:bg-orange-600 transition">
                 <UtensilsCrossed size={20} /> Donate Food
               </button>
