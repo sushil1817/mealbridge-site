@@ -1,10 +1,7 @@
-// We add ': any' to shut off the strict checks
-const nextConfig: any = {
+const nextConfig = {
   typescript: {
+    // This is still allowed and will stop the type errors
     ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
 };
 
