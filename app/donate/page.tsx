@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase"; // <--- Importing the connection!
+import { supabase } from "@/lib/supabase";
 import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 
@@ -19,7 +19,6 @@ export default function DonatePage() {
 
     setLoading(true);
 
-    // --- TALKING TO DATABASE ---
     const { error } = await supabase
       .from('donations')
       .insert([
@@ -36,7 +35,7 @@ export default function DonatePage() {
       alert("Error: " + error.message);
     } else {
       alert("Success! Food listed on MealBridge.");
-      setFormData({ title: "", quantity: "" }); // Reset form
+      setFormData({ title: "", quantity: "" });
       setHygieneChecks({ isCovered: false, isFresh: false, tempSafe: false });
     }
   };
@@ -52,24 +51,28 @@ export default function DonatePage() {
         
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-sm font-medium text-gray-600">Food Title</label>
+            {/* CHANGED: Made label darker (gray-900) */}
+            <label className="block text-sm font-bold text-gray-900">Food Title</label>
             <input 
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
               type="text" 
-              className="w-full mt-1 p-3 border rounded-lg" 
+              // CHANGED: Added text-gray-900 and placeholder-gray-500 for better visibility
+              className="w-full mt-1 p-3 border rounded-lg text-gray-900 placeholder-gray-500 font-medium" 
               placeholder="e.g., 5kg Rice" 
               required 
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600">Quantity</label>
+            {/* CHANGED: Made label darker (gray-900) */}
+            <label className="block text-sm font-bold text-gray-900">Quantity</label>
             <input 
               value={formData.quantity}
               onChange={(e) => setFormData({...formData, quantity: e.target.value})}
               type="text" 
-              className="w-full mt-1 p-3 border rounded-lg" 
+              // CHANGED: Added text-gray-900 and placeholder-gray-500
+              className="w-full mt-1 p-3 border rounded-lg text-gray-900 placeholder-gray-500 font-medium" 
               placeholder="e.g., 2 Packets" 
               required 
             />
@@ -87,17 +90,20 @@ export default function DonatePage() {
                   className="w-5 h-5 accent-[#FF6B35]" 
                   onChange={() => setHygieneChecks(prev => ({...prev, [key]: !prev[key as keyof typeof hygieneChecks]}))}
                 />
-                <span className="text-sm text-gray-700">Item is {key.replace('is', '')} & Safe</span>
+                {/* CHANGED: Made checklist text darker (gray-900) and bold */}
+                <span className="text-sm text-gray-900 font-medium">Item is {key.replace('is', '')} & Safe</span>
               </label>
             ))}
           </div>
 
           <button 
-          type="submit" 
-  // disabled={!isSafe || loading}  <-- I deleted this line
-      >
-   BROADCAST NOW (DEBUG MODE)
-</button>
+            type="submit" 
+            disabled={!isSafe || loading} 
+            // CHANGED: Updated disabled state to bg-gray-400 text-white for better contrast
+            className={`w-full p-4 rounded-xl font-bold text-white transition-all flex justify-center gap-2 ${isSafe ? "bg-[#FF6B35] hover:bg-orange-600" : "bg-gray-400 cursor-not-allowed"}`}
+          >
+            {loading ? <Loader2 className="animate-spin" /> : "Broadcast Donation"}
+          </button>
         </form>
       </div>
     </div>
