@@ -20,7 +20,7 @@ export default function LandingPage() {
             </span>
           </h1>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-10">
-            <Link href="/restaurant-new">
+            <Link href="/restaurant">
               <button className="px-8 py-4 bg-[#FF6B35] text-white font-bold rounded-full shadow-lg flex items-center gap-2 hover:bg-orange-600 transition">
                 <UtensilsCrossed size={20} /> Donate Food
               </button>
