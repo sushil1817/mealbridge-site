@@ -10,22 +10,26 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false); // Toggle between Login and Sign Up
+  const [isSignUp, setIsSignUp] = useState(false);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     if (isSignUp) {
-      // HANDLE SIGN UP
+      // SIGN UP LOGIC
       const { error } = await supabase.auth.signUp({
         email,
         password,
       });
-      if (error) alert(error.message);
-      else alert("Check your email for the confirmation link!");
+      if (error) {
+        alert(error.message);
+      } else {
+        alert("Success! Please check your email to confirm your account.");
+        // We stay here so they can read the alert
+      }
     } else {
-      // HANDLE LOGIN
+      // LOGIN LOGIC
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -33,8 +37,10 @@ export default function LoginPage() {
       if (error) {
         alert(error.message);
       } else {
-        // SUCCESS: Go to the Volunteer page
-        router.push("/volunteer");
+        // --- THE FIX IS HERE ---
+        // Old: router.push("/volunteer");
+        // New: Go to Home so they can choose "Donate" or "Volunteer"
+        router.push("/"); 
       }
     }
     setLoading(false);
@@ -49,7 +55,9 @@ export default function LoginPage() {
             <Lock size={32} className="text-[#FF6B35]" />
           </div>
           <h1 className="text-2xl font-bold text-white">{isSignUp ? "Create Account" : "Welcome Back"}</h1>
-          <p className="text-gray-400 mt-2">To save food, we need to know who you are.</p>
+          <p className="text-gray-400 mt-2">
+            {isSignUp ? "Join as a Donor or Volunteer" : "Login to manage food rescue"}
+          </p>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
