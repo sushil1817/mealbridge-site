@@ -22,49 +22,35 @@ export default function VolunteerPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Check if User is Logged In
+    // 1. Check User & Fetch Data
     const checkUserAndSetup = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push("/login");
         return;
       }
-      
-      // If user exists, fetch initial data
       await fetchDonations();
     };
-
     checkUserAndSetup();
 
-    // 2. REAL-TIME LISTENER (The Magic Part)
+    // 2. Real-Time Listener
     const channel = supabase
       .channel('realtime donations')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'donations' },
         (payload) => {
-          // A new donation was just added to the database!
-          console.log('New food detected!', payload);
-          
           const newFood = payload.new as Donation;
-
-          // Only show it if it is 'available'
           if (newFood.status === 'available') {
-            // a. Play a "Pop" sound
             const audio = new Audio('https://codeskulptor-demos.commondatastorage.googleapis.com/pang/pop.mp3');
-            audio.play().catch(e => console.log("Audio play failed (browser blocked it)", e));
-
-            // b. Add it to the TOP of the list instantly
+            audio.play().catch(e => console.log("Audio play failed", e));
             setDonations((currentList) => [newFood, ...currentList]);
           }
         }
       )
       .subscribe();
 
-    // Cleanup: Stop listening when we leave the page
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [router]);
 
   const fetchDonations = async () => {
@@ -79,11 +65,22 @@ export default function VolunteerPage() {
   };
 
   const handleClaim = async (id: string) => {
-    // Optimistic Update: Hide it immediately
+    // 1. Get Current User
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // 2. Optimistic Update
     setDonations(donations.filter(item => item.id !== id));
     
-    // Update Database
-    await supabase.from('donations').update({ status: 'claimed' }).eq('id', id);
+    // 3. Database Update: Mark claimed & Save volunteer_id
+    await supabase
+      .from('donations')
+      .update({ 
+        status: 'claimed',
+        volunteer_id: user.id // <--- SAVES YOUR ID
+      })
+      .eq('id', id);
+      
     alert("Success! You have claimed this pickup.");
   };
 
@@ -114,7 +111,6 @@ export default function VolunteerPage() {
           <div className="grid md:grid-cols-2 gap-6">
             {donations.map((food) => (
               <div key={food.id} className="bg-slate-900 overflow-hidden rounded-2xl shadow-lg border border-slate-800 hover:border-slate-600 transition-all flex flex-col animate-in fade-in slide-in-from-top-4 duration-500">
-                
                 <div className="h-48 w-full bg-slate-800 relative">
                   {food.image_url ? (
                     <img src={food.image_url} alt={food.title} className="w-full h-full object-cover" />
@@ -127,36 +123,21 @@ export default function VolunteerPage() {
                     {new Date(food.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                   </span>
                 </div>
-
                 <div className="p-6 flex flex-col grow">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-white">{food.title}</h3>
-                      <p className="text-[#118AB2] font-medium flex items-center gap-2 mt-1">
-                        <Package size={16} /> {food.quantity}
-                      </p>
-                    </div>
-                  </div>
-
-                  <a 
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(food.location || "India")}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-gray-400 text-sm mb-6 hover:text-[#118AB2] transition-colors underline"
-                  >
-                    <MapPin size={16} />
-                    <span>{food.location || "View on Map"}</span>
+                  <h3 className="text-xl font-bold text-white mb-1">{food.title}</h3>
+                  <p className="text-[#118AB2] font-medium flex items-center gap-2 mb-4"><Package size={16} /> {food.quantity}</p>
+                  
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(food.location || "India")}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-400 text-sm mb-6 hover:text-[#118AB2] transition-colors underline">
+                    <MapPin size={16} /> <span>{food.location || "View on Map"}</span>
                   </a>
 
                   <div className="grid grid-cols-4 gap-2 mt-auto">
                     {food.phone && (
-                      <a href={`tel:${food.phone}`} className="col-span-1 py-3 bg-green-600 text-white font-bold rounded-xl flex items-center justify-center hover:bg-green-700 transition-colors">
+                      <a href={`tel:${food.phone}`} className="col-span-1 py-3 bg-green-600 text-white font-bold rounded-xl flex items-center justify-center hover:bg-green-700">
                         <Phone size={20} />
                       </a>
                     )}
-                    <button 
-                      onClick={() => handleClaim(food.id)}
-                      className={`${food.phone ? "col-span-3" : "col-span-4"} py-3 bg-[#118AB2] text-white font-bold rounded-xl hover:bg-[#0e7c9e] transition-colors`}
-                    >
+                    <button onClick={() => handleClaim(food.id)} className={`${food.phone ? "col-span-3" : "col-span-4"} py-3 bg-[#118AB2] text-white font-bold rounded-xl hover:bg-[#0e7c9e]`}>
                       Claim Pickup
                     </button>
                   </div>
