@@ -17,29 +17,21 @@ export default function LoginPage() {
     setLoading(true);
 
     if (isSignUp) {
-      // SIGN UP LOGIC
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      // SIGN UP
+      const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
         alert(error.message);
       } else {
-        alert("Success! Please check your email to confirm your account.");
-        // We stay here so they can read the alert
+        alert("Success! Check your email to confirm.");
       }
     } else {
-      // LOGIN LOGIC
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // LOGIN
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         alert(error.message);
       } else {
-        // --- THE FIX IS HERE ---
-        // Old: router.push("/volunteer");
-        // New: Go to Home so they can choose "Donate" or "Volunteer"
+        // --- THIS IS THE FIX ---
+        // It sends you to HOME ("/") instead of Volunteer
         router.push("/"); 
       }
     }
@@ -49,48 +41,37 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
       <div className="w-full max-w-md bg-slate-900 p-8 rounded-2xl shadow-xl border border-slate-800">
-        
         <div className="text-center mb-8">
           <div className="inline-block p-3 rounded-full bg-slate-800 mb-4 border border-slate-700">
             <Lock size={32} className="text-[#FF6B35]" />
           </div>
           <h1 className="text-2xl font-bold text-white">{isSignUp ? "Create Account" : "Welcome Back"}</h1>
-          <p className="text-gray-400 mt-2">
-            {isSignUp ? "Join as a Donor or Volunteer" : "Login to manage food rescue"}
-          </p>
+          <p className="text-gray-400 mt-2">Login to manage food rescue.</p>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
           <div>
             <label className="block text-sm font-bold text-gray-400 mb-1">Email</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 text-gray-600" size={20} />
-              <input 
-                type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 p-3 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:border-[#FF6B35]"
-                placeholder="you@example.com"
-                required
-              />
-            </div>
+            <input 
+              type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:border-[#FF6B35]"
+              placeholder="you@example.com"
+              required
+            />
           </div>
-
           <div>
             <label className="block text-sm font-bold text-gray-400 mb-1">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 text-gray-600" size={20} />
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 p-3 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:border-[#FF6B35]"
-                placeholder="••••••••"
-                required
-              />
-            </div>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:border-[#FF6B35]"
+              placeholder="••••••••"
+              required
+            />
           </div>
-
           <button 
             type="submit" 
             disabled={loading}
@@ -101,17 +82,10 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center">
-          <button 
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-gray-400 hover:text-white text-sm"
-          >
+          <button onClick={() => setIsSignUp(!isSignUp)} className="text-gray-400 hover:text-white text-sm">
             {isSignUp ? "Already have an account? Login" : "New here? Create an account"}
           </button>
         </div>
-
-        <Link href="/" className="block text-center mt-6 text-gray-600 hover:text-gray-400 text-sm">
-          Back to Home
-        </Link>
       </div>
     </div>
   );
