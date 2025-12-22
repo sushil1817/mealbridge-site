@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, Package, CheckCircle, Image as ImageIcon, Phone, User } from "lucide-react";
 import Link from "next/link";
 
@@ -9,33 +10,38 @@ type Donation = {
 };
 
 export default function VolunteerPage() {
+  const router = useRouter();
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchDonations(); }, []);
+  // --- GATEKEEPER LOGIC ---
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login"); // Kick to login if not authenticated
+      } else {
+        fetchDonations(); // Only fetch data if user exists
+      }
+    };
+    checkUser();
+  }, [router]);
+  // -----------------------
 
   const fetchDonations = async () => {
     setLoading(true);
-    // ONLY FETCH 'AVAILABLE' ITEMS
     const { data } = await supabase
       .from('donations')
       .select('*')
-      .eq('status', 'available') // <--- The Filter
+      .eq('status', 'available')
       .order('created_at', { ascending: false });
     setDonations(data || []);
     setLoading(false);
   };
 
   const handleClaim = async (id: string) => {
-    // Optimistic Update: Remove from screen immediately
     setDonations(donations.filter(item => item.id !== id));
-    
-    // Database Update: Mark as 'claimed' (DO NOT DELETE)
-    await supabase
-      .from('donations')
-      .update({ status: 'claimed' })
-      .eq('id', id);
-      
+    await supabase.from('donations').update({ status: 'claimed' }).eq('id', id);
     alert("Success! You have claimed this pickup.");
   };
 
@@ -45,7 +51,6 @@ export default function VolunteerPage() {
         <Link href="/" className="flex items-center gap-2 text-gray-400 font-bold hover:text-white transition">
           <ArrowLeft size={20} /> Back Home
         </Link>
-        {/* Link to the new Profile Page */}
         <Link href="/profile" className="flex items-center gap-2 text-[#FF6B35] font-bold hover:underline">
           <User size={20} /> My Impact
         </Link>
