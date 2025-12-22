@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, MapPin, Package, CheckCircle, Image as ImageIcon, Phone } from "lucide-react";
+import { ArrowLeft, MapPin, Package, CheckCircle, Image as ImageIcon, Phone, User } from "lucide-react";
 import Link from "next/link";
 
-// Added 'phone' to the definition
 type Donation = {
   id: string; title: string; quantity: string; location: string; image_url?: string; phone?: string; created_at: string;
 };
@@ -17,22 +16,40 @@ export default function VolunteerPage() {
 
   const fetchDonations = async () => {
     setLoading(true);
-    const { data } = await supabase.from('donations').select('*').order('created_at', { ascending: false });
+    // ONLY FETCH 'AVAILABLE' ITEMS
+    const { data } = await supabase
+      .from('donations')
+      .select('*')
+      .eq('status', 'available') // <--- The Filter
+      .order('created_at', { ascending: false });
     setDonations(data || []);
     setLoading(false);
   };
 
   const handleClaim = async (id: string) => {
+    // Optimistic Update: Remove from screen immediately
     setDonations(donations.filter(item => item.id !== id));
-    await supabase.from('donations').delete().eq('id', id);
+    
+    // Database Update: Mark as 'claimed' (DO NOT DELETE)
+    await supabase
+      .from('donations')
+      .update({ status: 'claimed' })
+      .eq('id', id);
+      
     alert("Success! You have claimed this pickup.");
   };
 
   return (
     <div className="min-h-screen p-6">
-      <Link href="/" className="flex items-center gap-2 text-gray-400 mb-8 font-bold hover:text-white transition">
-        <ArrowLeft size={20} /> Back Home
-      </Link>
+      <div className="flex justify-between items-center mb-8">
+        <Link href="/" className="flex items-center gap-2 text-gray-400 font-bold hover:text-white transition">
+          <ArrowLeft size={20} /> Back Home
+        </Link>
+        {/* Link to the new Profile Page */}
+        <Link href="/profile" className="flex items-center gap-2 text-[#FF6B35] font-bold hover:underline">
+          <User size={20} /> My Impact
+        </Link>
+      </div>
 
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-2">Volunteer Dashboard</h1>
@@ -50,8 +67,6 @@ export default function VolunteerPage() {
           <div className="grid md:grid-cols-2 gap-6">
             {donations.map((food) => (
               <div key={food.id} className="bg-slate-900 overflow-hidden rounded-2xl shadow-lg border border-slate-800 hover:border-slate-600 transition-all flex flex-col">
-                
-                {/* Image Section */}
                 <div className="h-48 w-full bg-slate-800 relative">
                   {food.image_url ? (
                     <img src={food.image_url} alt={food.title} className="w-full h-full object-cover" />
@@ -84,19 +99,12 @@ export default function VolunteerPage() {
                     <span>{food.location || "View on Map"}</span>
                   </a>
 
-                  {/* Buttons Grid */}
                   <div className="grid grid-cols-4 gap-2 mt-auto">
-                    {/* The Call Button (Only shows if phone exists) */}
                     {food.phone && (
-                      <a 
-                        href={`tel:${food.phone}`}
-                        className="col-span-1 py-3 bg-green-600 text-white font-bold rounded-xl flex items-center justify-center hover:bg-green-700 transition-colors"
-                      >
+                      <a href={`tel:${food.phone}`} className="col-span-1 py-3 bg-green-600 text-white font-bold rounded-xl flex items-center justify-center hover:bg-green-700 transition-colors">
                         <Phone size={20} />
                       </a>
                     )}
-
-                    {/* The Claim Button */}
                     <button 
                       onClick={() => handleClaim(food.id)}
                       className={`${food.phone ? "col-span-3" : "col-span-4"} py-3 bg-[#118AB2] text-white font-bold rounded-xl hover:bg-[#0e7c9e] transition-colors`}
@@ -104,7 +112,6 @@ export default function VolunteerPage() {
                       Claim Pickup
                     </button>
                   </div>
-
                 </div>
               </div>
             ))}
