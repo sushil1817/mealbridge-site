@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { AlertTriangle, ArrowLeft, Loader2, MapPin, Camera } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Loader2, MapPin, Camera, Phone } from "lucide-react";
 import Link from "next/link";
 
 export default function DonatePage() {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({ title: "", quantity: "", location: "" });
-  const [imageFile, setImageFile] = useState<File | null>(null); // New state for the file
+  // Added 'phone' to the state
+  const [formData, setFormData] = useState({ title: "", quantity: "", location: "", phone: "" });
+  const [imageFile, setImageFile] = useState<File | null>(null);
   
   const [hygieneChecks, setHygieneChecks] = useState({
     isCovered: false, isFresh: false, tempSafe: false,
@@ -22,30 +23,19 @@ export default function DonatePage() {
     setLoading(true);
     let uploadedImageUrl = "";
 
-    // 1. Upload Image if one is selected
     if (imageFile) {
       const fileName = `${Date.now()}-${imageFile.name}`;
-      const { data, error: uploadError } = await supabase
-        .storage
-        .from('food-images')
-        .upload(fileName, imageFile);
-
+      const { error: uploadError } = await supabase.storage.from('food-images').upload(fileName, imageFile);
       if (uploadError) {
-        alert("Error uploading image: " + uploadError.message);
+        alert("Error uploading image");
         setLoading(false);
         return;
       }
-
-      // 2. Get the Public URL so we can save it
-      const { data: publicUrlData } = supabase
-        .storage
-        .from('food-images')
-        .getPublicUrl(fileName);
-        
-      uploadedImageUrl = publicUrlData.publicUrl;
+      const { data } = supabase.storage.from('food-images').getPublicUrl(fileName);
+      uploadedImageUrl = data.publicUrl;
     }
 
-    // 3. Save to Database (including image_url)
+    // Saving phone number to database now
     const { error } = await supabase
       .from('donations')
       .insert([
@@ -53,7 +43,8 @@ export default function DonatePage() {
           title: formData.title, 
           quantity: formData.quantity,
           location: formData.location,
-          image_url: uploadedImageUrl, // <--- Saving the link here
+          phone: formData.phone, // <--- New Field
+          image_url: uploadedImageUrl,
           is_safe: true 
         }
       ]);
@@ -63,8 +54,8 @@ export default function DonatePage() {
     if (error) {
       alert("Error: " + error.message);
     } else {
-      alert("Success! Food listed with photo.");
-      setFormData({ title: "", quantity: "", location: "" });
+      alert("Success! Food listed.");
+      setFormData({ title: "", quantity: "", location: "", phone: "" });
       setImageFile(null);
       setHygieneChecks({ isCovered: false, isFresh: false, tempSafe: false });
     }
@@ -81,7 +72,7 @@ export default function DonatePage() {
         
         <form className="space-y-6" onSubmit={handleSubmit}>
           
-          {/* Image Upload Input */}
+          {/* Photo Upload */}
           <div>
             <label className="block text-sm font-bold text-gray-400 mb-2">Food Photo (Optional)</label>
             <div className="relative border-2 border-dashed border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center text-gray-500 hover:border-[#FF6B35] transition-colors cursor-pointer bg-slate-950">
@@ -116,6 +107,21 @@ export default function DonatePage() {
               className="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white placeholder-gray-600 focus:border-[#FF6B35] outline-none" 
               placeholder="e.g., 2 Packets" required 
             />
+          </div>
+
+          {/* NEW PHONE INPUT */}
+          <div>
+            <label className="block text-sm font-bold text-gray-400 mb-1">Phone Number</label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-3 text-gray-600" size={20} />
+              <input 
+                value={formData.phone}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                type="tel" 
+                className="w-full pl-10 p-3 bg-slate-950 border border-slate-800 rounded-lg text-white placeholder-gray-600 focus:border-[#FF6B35] outline-none" 
+                placeholder="e.g., 98765 43210" required 
+              />
+            </div>
           </div>
 
           <div>

@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, MapPin, Package, CheckCircle, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, MapPin, Package, CheckCircle, Image as ImageIcon, Phone } from "lucide-react";
 import Link from "next/link";
 
-// Added image_url to type
+// Added 'phone' to the definition
 type Donation = {
-  id: string; title: string; quantity: string; location: string; image_url?: string; created_at: string;
+  id: string; title: string; quantity: string; location: string; image_url?: string; phone?: string; created_at: string;
 };
 
 export default function VolunteerPage() {
@@ -84,12 +84,27 @@ export default function VolunteerPage() {
                     <span>{food.location || "View on Map"}</span>
                   </a>
 
-                  <button 
-                    onClick={() => handleClaim(food.id)}
-                    className="mt-auto w-full py-3 bg-[#118AB2] text-white font-bold rounded-xl hover:bg-[#0e7c9e] transition-colors"
-                  >
-                    Claim Pickup
-                  </button>
+                  {/* Buttons Grid */}
+                  <div className="grid grid-cols-4 gap-2 mt-auto">
+                    {/* The Call Button (Only shows if phone exists) */}
+                    {food.phone && (
+                      <a 
+                        href={`tel:${food.phone}`}
+                        className="col-span-1 py-3 bg-green-600 text-white font-bold rounded-xl flex items-center justify-center hover:bg-green-700 transition-colors"
+                      >
+                        <Phone size={20} />
+                      </a>
+                    )}
+
+                    {/* The Claim Button */}
+                    <button 
+                      onClick={() => handleClaim(food.id)}
+                      className={`${food.phone ? "col-span-3" : "col-span-4"} py-3 bg-[#118AB2] text-white font-bold rounded-xl hover:bg-[#0e7c9e] transition-colors`}
+                    >
+                      Claim Pickup
+                    </button>
+                  </div>
+
                 </div>
               </div>
             ))}
