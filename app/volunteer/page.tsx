@@ -6,7 +6,14 @@ import { ArrowLeft, MapPin, Package, CheckCircle, Image as ImageIcon, Phone, Use
 import Link from "next/link";
 
 type Donation = {
-  id: string; title: string; quantity: string; location: string; image_url?: string; phone?: string; created_at: string;
+  id: string; 
+  title: string; 
+  quantity: string; 
+  location: string; 
+  image_url?: string; 
+  phone?: string; 
+  created_at: string;
+  status: string;
 };
 
 export default function VolunteerPage() {
@@ -14,19 +21,51 @@ export default function VolunteerPage() {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // --- GATEKEEPER LOGIC ---
   useEffect(() => {
-    const checkUser = async () => {
+    // 1. Check if User is Logged In
+    const checkUserAndSetup = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push("/login"); // Kick to login if not authenticated
-      } else {
-        fetchDonations(); // Only fetch data if user exists
+        router.push("/login");
+        return;
       }
+      
+      // If user exists, fetch initial data
+      await fetchDonations();
     };
-    checkUser();
+
+    checkUserAndSetup();
+
+    // 2. REAL-TIME LISTENER (The Magic Part)
+    const channel = supabase
+      .channel('realtime donations')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'donations' },
+        (payload) => {
+          // A new donation was just added to the database!
+          console.log('New food detected!', payload);
+          
+          const newFood = payload.new as Donation;
+
+          // Only show it if it is 'available'
+          if (newFood.status === 'available') {
+            // a. Play a "Pop" sound
+            const audio = new Audio('https://codeskulptor-demos.commondatastorage.googleapis.com/pang/pop.mp3');
+            audio.play().catch(e => console.log("Audio play failed (browser blocked it)", e));
+
+            // b. Add it to the TOP of the list instantly
+            setDonations((currentList) => [newFood, ...currentList]);
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup: Stop listening when we leave the page
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [router]);
-  // -----------------------
 
   const fetchDonations = async () => {
     setLoading(true);
@@ -40,7 +79,10 @@ export default function VolunteerPage() {
   };
 
   const handleClaim = async (id: string) => {
+    // Optimistic Update: Hide it immediately
     setDonations(donations.filter(item => item.id !== id));
+    
+    // Update Database
     await supabase.from('donations').update({ status: 'claimed' }).eq('id', id);
     alert("Success! You have claimed this pickup.");
   };
@@ -58,7 +100,7 @@ export default function VolunteerPage() {
 
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-2">Volunteer Dashboard</h1>
-        <p className="text-gray-400 mb-8">Available food pickups near you.</p>
+        <p className="text-gray-400 mb-8">Live Feed: Waiting for new donations...</p>
 
         {loading ? (
           <p className="text-gray-500 animate-pulse">Scanning for food...</p>
@@ -71,7 +113,8 @@ export default function VolunteerPage() {
         ) : (
           <div className="grid md:grid-cols-2 gap-6">
             {donations.map((food) => (
-              <div key={food.id} className="bg-slate-900 overflow-hidden rounded-2xl shadow-lg border border-slate-800 hover:border-slate-600 transition-all flex flex-col">
+              <div key={food.id} className="bg-slate-900 overflow-hidden rounded-2xl shadow-lg border border-slate-800 hover:border-slate-600 transition-all flex flex-col animate-in fade-in slide-in-from-top-4 duration-500">
+                
                 <div className="h-48 w-full bg-slate-800 relative">
                   {food.image_url ? (
                     <img src={food.image_url} alt={food.title} className="w-full h-full object-cover" />
