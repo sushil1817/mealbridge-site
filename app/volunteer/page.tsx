@@ -18,31 +18,24 @@ type Donation = {
 
 export default function VolunteerPage() {
   const router = useRouter();
-  const [availableFood, setAvailableFood] = useState<Donation[]>([]);
-  const [myDeliveries, setMyDeliveries] = useState<Donation[]>([]);
+  const [availableFood, setAvailableFood] = useState<Donation[]>([]); // Zone B items
+  const [myDeliveries, setMyDeliveries] = useState<Donation[]>([]); // Zone A items
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
 
   useEffect(() => {
     const setup = async () => {
-      // 1. Get User
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+      if (!user) { router.push("/login"); return; }
       setUserId(user.id);
       await fetchData(user.id);
     };
     setup();
 
-    // 2. Real-Time Listener (For new food)
+    // Real-Time Listener
     const channel = supabase
       .channel('realtime donations')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'donations' },
-        (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'donations' }, (payload) => {
           const newFood = payload.new as Donation;
           if (newFood.status === 'available') {
             const audio = new Audio('https://codeskulptor-demos.commondatastorage.googleapis.com/pang/pop.mp3');
@@ -59,54 +52,46 @@ export default function VolunteerPage() {
   const fetchData = async (uid: string) => {
     setLoading(true);
     
-    // A. Fetch Available Food (For everyone)
+    // 1. Get Available Items (For Zone B)
     const { data: available } = await supabase
       .from('donations')
       .select('*')
-      .eq('status', 'available')
+      .eq('status', 'available') // Only available items
       .order('created_at', { ascending: false });
     
-    // B. Fetch MY Active Deliveries (Claimed by ME)
+    // 2. Get My Active Claims (For Zone A)
     const { data: mine } = await supabase
       .from('donations')
       .select('*')
-      .eq('volunteer_id', uid)
-      .eq('status', 'claimed'); // active items only
+      .eq('volunteer_id', uid) // Only items claimed by ME
+      .eq('status', 'claimed'); // Only items that are NOT completed yet
 
     setAvailableFood(available || []);
     setMyDeliveries(mine || []);
     setLoading(false);
   };
 
+  // ACTION: Move from Zone B -> Zone A
   const handleClaim = async (id: string) => {
-    // 1. Find the item
     const item = availableFood.find(f => f.id === id);
     if (!item) return;
 
-    // 2. Optimistic Update (Move from Available -> My Deliveries)
+    // Optimistic Update
     setAvailableFood(prev => prev.filter(i => i.id !== id));
     setMyDeliveries(prev => [item, ...prev]);
 
-    // 3. Database Update
-    await supabase
-      .from('donations')
-      .update({ status: 'claimed', volunteer_id: userId })
-      .eq('id', id);
-      
-    alert("Pickup Claimed! It is now in your 'Active Deliveries' list.");
+    // Database Update
+    await supabase.from('donations').update({ status: 'claimed', volunteer_id: userId }).eq('id', id);
   };
 
+  // ACTION: Move from Zone A -> Done (History)
   const handleComplete = async (id: string) => {
-    // 1. Optimistic Update (Remove from screen)
+    // Optimistic Update
     setMyDeliveries(prev => prev.filter(i => i.id !== id));
 
-    // 2. Database Update (Mark as Completed)
-    await supabase
-      .from('donations')
-      .update({ status: 'completed' })
-      .eq('id', id);
-
-    alert("Great job! Delivery marked as complete.");
+    // Database Update
+    await supabase.from('donations').update({ status: 'completed' }).eq('id', id);
+    alert("Delivery Completed! Added to your Profile stats.");
   };
 
   return (
@@ -120,23 +105,25 @@ export default function VolunteerPage() {
         </Link>
       </div>
 
-      <div className="max-w-4xl mx-auto space-y-10">
+      <div className="max-w-4xl mx-auto space-y-12">
         
-        {/* SECTION 1: MY ACTIVE DELIVERIES */}
+        {/* --- ZONE A: MY ACTIVE DELIVERIES (Shows "Mark Delivered") --- */}
         {myDeliveries.length > 0 && (
           <div className="animate-in fade-in slide-in-from-top-4">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <Truck className="text-yellow-500" /> Active Deliveries
-            </h2>
+            <div className="flex items-center gap-2 mb-4 p-4 bg-yellow-900/20 rounded-xl border border-yellow-600/30">
+              <Truck className="text-yellow-500" /> 
+              <h2 className="text-xl font-bold text-white">My Active Orders</h2>
+            </div>
+            
             <div className="grid md:grid-cols-2 gap-6">
               {myDeliveries.map((food) => (
-                <div key={food.id} className="bg-slate-900 border-2 border-yellow-600/50 rounded-2xl overflow-hidden relative">
-                   <div className="absolute top-0 left-0 bg-yellow-600 text-black font-bold text-xs px-3 py-1 rounded-br-lg z-10">
+                <div key={food.id} className="bg-slate-900 border-2 border-yellow-500 rounded-2xl overflow-hidden relative shadow-2xl shadow-yellow-900/20">
+                   <div className="absolute top-0 right-0 bg-yellow-500 text-black font-bold text-xs px-3 py-1 rounded-bl-lg z-10">
                      IN PROGRESS
                    </div>
                    
-                   <div className="p-6 pt-8">
-                      <h3 className="text-xl font-bold text-white">{food.title}</h3>
+                   <div className="p-6">
+                      <h3 className="text-xl font-bold text-white mb-1">{food.title}</h3>
                       <p className="text-gray-400 text-sm mb-4">{food.location}</p>
                       
                       {food.phone && (
@@ -146,6 +133,7 @@ export default function VolunteerPage() {
                         </div>
                       )}
 
+                      {/* THIS BUTTON ONLY APPEARS HERE */}
                       <button 
                         onClick={() => handleComplete(food.id)}
                         className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all"
@@ -159,7 +147,7 @@ export default function VolunteerPage() {
           </div>
         )}
 
-        {/* SECTION 2: AVAILABLE FOOD */}
+        {/* --- ZONE B: NEW REQUESTS FEED (Shows "Claim Pickup") --- */}
         <div>
           <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
             <Package className="text-[#118AB2]" /> Available Pickups
@@ -193,6 +181,7 @@ export default function VolunteerPage() {
                       <MapPin size={12} /> {food.location}
                     </p>
 
+                    {/* THIS BUTTON ONLY APPEARS HERE */}
                     <button 
                       onClick={() => handleClaim(food.id)}
                       className="mt-auto py-2 bg-[#118AB2] text-white font-bold rounded-lg hover:bg-[#0e7c9e] transition-colors"
